@@ -1,0 +1,196 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  events       Event[]
+}
+
+model Event {
+  id            String         @id @default(uuid())
+  slug          String         @unique
+  title         String
+  type          String         // wedding | birthday | college | community
+  date          DateTime
+  endDate       DateTime?
+  venue         String
+  city          String
+  description   String?
+  guestCount    Int            @default(0)
+  budget        Float          @default(0)
+  currency      String         @default("INR")
+  coverImage    String?
+  publicToken   String         @unique
+  surpriseMode  Boolean        @default(false)
+  language      String         @default("en")
+  status        String         @default("active") // active | completed | cancelled
+  organizerId   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  organizer     User           @relation(fields: [organizerId], references: [id])
+  guests        Guest[]
+  tasks         Task[]
+  budgetItems   BudgetItem[]
+  functions     EventFunction[]
+  aiPlans       AiPlan[]
+  donations     Donation[]
+  competitions  Competition[]
+}
+
+model EventFunction {
+  id        String   @id @default(uuid())
+  eventId   String
+  name      String   // mehendi | sangeet | wedding | reception
+  date      DateTime
+  venue     String?
+  startTime String?
+  endTime   String?
+  notes     String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guestFunctions GuestFunction[]
+}
+
+model Guest {
+  id            String    @id @default(uuid())
+  eventId       String
+  name          String
+  email         String?
+  phone         String?
+  group         String?
+  tags          String?   // comma-separated
+  plusOnes      Int       @default(0)
+  mealPref      String?   // veg | nonveg | vegan | jain
+  notes         String?
+  qrToken       String    @unique
+  rsvpStatus    String    @default("pending") // pending | yes | no | maybe
+  rsvpAt        DateTime?
+  partySize     Int       @default(1)
+  checkedIn     Boolean   @default(false)
+  checkedInAt   DateTime?
+  inviteSent    Boolean   @default(false)
+  isHonorGuest  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  event         Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guestFunctions GuestFunction[]
+}
+
+model GuestFunction {
+  id         String        @id @default(uuid())
+  guestId    String
+  functionId String
+  rsvp       String        @default("pending")
+
+  guest      Guest         @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  function   EventFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([guestId, functionId])
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  eventId     String
+  title       String
+  description String?
+  category    String?
+  owner       String?
+  dueDate     DateTime?
+  priority    String   @default("medium") // low | medium | high | urgent
+  status      String   @default("todo")  // todo | in_progress | done | blocked
+  progress    Int      @default(0)       // 0-100
+  aiGenerated Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model BudgetItem {
+  id          String   @id @default(uuid())
+  eventId     String
+  category    String
+  name        String
+  estimated   Float    @default(0)
+  actual      Float    @default(0)
+  paid        Float    @default(0)
+  vendor      String?
+  notes       String?
+  aiGenerated Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model AiPlan {
+  id          String   @id @default(uuid())
+  eventId     String
+  prompt      String
+  response    String   // JSON stored as string for SQLite compatibility
+  applied     Boolean  @default(false)
+  appliedAt   DateTime?
+  model       String   @default("claude-3-5-haiku-20241022")
+  createdAt   DateTime @default(now())
+
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Donation {
+  id          String   @id @default(uuid())
+  eventId     String
+  donorName   String
+  amount      Float
+  message     String?
+  isAnonymous Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Competition {
+  id           String   @id @default(uuid())
+  eventId      String
+  name         String
+  description  String?
+  category     String?
+  maxTeamSize  Int      @default(1)
+  prize        String?
+  registrations CompetitionRegistration[]
+  createdAt    DateTime @default(now())
+
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model CompetitionRegistration {
+  id            String      @id @default(uuid())
+  competitionId String
+  teamName      String
+  members       String      // JSON array of member names
+  email         String
+  phone         String?
+  certToken     String      @unique @default(uuid())
+  createdAt     DateTime    @default(now())
+
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+}

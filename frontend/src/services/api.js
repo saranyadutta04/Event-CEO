@@ -2,7 +2,7 @@ import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 
 const api = axios.create({
-  baseURL: 'https://event-ceo-backend-glptvdaw-saranya4.vercel.app/api',
+  baseURL: 'https://event-ceo-backend.vercel.app/api',
   timeout: 30000,
 })
 
